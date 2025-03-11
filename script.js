@@ -1,49 +1,29 @@
-// script.js
-const transcriptArea = document.getElementById('transcript');
-const startBtn = document.getElementById('start-btn');
-const stopBtn = document.getElementById('stop-btn');
+function uploadAudio() {
+    let fileInput = document.getElementById("audioFile");
+    if (fileInput.files.length === 0) {
+        alert("Please select an audio file!");
+        return;
+    }
 
-let recognition;
-if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-    recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
+    let file = fileInput.files[0];
+    let formData = new FormData();
+    formData.append("audio", file);
 
-    recognition.onresult = (event) => {
-        let interimTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-            const result = event.results[i];
-            if (result.isFinal) {
-                transcriptArea.value += result[0].transcript;
-            } else {
-                interimTranscript += result[0].transcript;
-            }
+    fetch("http://localhost:5000/upload", {  // Change this URL to your Azure backend
+        method: "POST",
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.transcript) {
+            document.getElementById("transcript").innerText = data.transcript;
+            document.getElementById("transcriptContainer").style.display = "block";
+        } else {
+            alert("Error processing the audio!");
         }
-    };
-
-    recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        alert('An error occurred: ' + event.error);
-    };
-} else {
-    alert('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
-    startBtn.disabled = true;
-    stopBtn.disabled = true;
+    })
+    .catch(error => {
+        console.error("Error:", error);
+        alert("Failed to upload audio. Check the console for details.");
+    });
 }
-
-startBtn.addEventListener('click', () => {
-    if (recognition) {
-        recognition.start();
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
-    }
-});
-
-stopBtn.addEventListener('click', () => {
-    if (recognition) {
-        recognition.stop();
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
-    }
-});
